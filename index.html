@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#8b5cf6" />
+  <title>Ability Scores D&amp;D</title>
+  <style>
+   :root{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --bg: #0f172a;
+  --card: #0b1220;
+  --text: #e6eef8;
+  --accent: #8b5cf6;
+  --danger: #ef4444;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: linear-gradient(180deg,#071028,#0b1220);
+  color:var(--text);
+}
+
+.wrap{
+  width: min(720px, 96%);
+  padding:24px;
+  border-radius:12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  box-shadow: 0 6px 30px rgba(2,6,23,0.6);
+}
+
+.dice-row{
+  display:flex;
+  gap:12px;
+  margin:16px 0 8px 0;
+}
+
+.die{
+  width:84px;
+  height:84px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:32px;
+  border-radius:10px;
+  background: rgba(255,255,255,0.03);
+  border: 2px solid rgba(255,255,255,0.04);
+  transition: transform .12s ease, background .12s ease;
+}
+
+/* clase que aplicaremos al/los dado(s) con el valor mínimo */
+.die.min{
+  background: var(--danger);
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 6px 18px rgba(239,68,68,0.25);
+}
+
+.controls{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:12px;
+  flex-wrap:wrap;
+}
+
+button {
+  padding:10px 14px;
+  border-radius:10px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  cursor:pointer;
+  font-weight:600;
+}
+
+.sum{
+  margin-left:8px;
+  font-weight:700;
+}
+
+      
+.history-section {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#history {
+  font-weight: 600;
+  background: rgba(255,255,255,0.03);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+      
+      #sortBtn {
+          width: 80px;
+          
+      }
+      
+  </style>
+</head>
+<body>
+  <main class="wrap">
+      <h1>4d6 Ability Scores</h1>
+
+    <div id="dice" class="dice-row">
+      <div class="die" id="die0">—</div>
+      <div class="die" id="die1">—</div>
+      <div class="die" id="die2">—</div>
+      <div class="die" id="die3">—</div>
+    </div>
+
+    <div class="controls">
+      <button id="rollBtn">Roll 4d6</button>
+      <label><input type="checkbox" id="dropLowest" /> 4d6, drop lowest</label>
+      <div id="sum" class="sum">Total: —</div>
+    </div>
+<div class="history-section">
+  <button id="sortBtn">Ordenar ↓</button>
+  <div id="history" class="history">Last 6 dice rolls: —</div>
+</div>
+
+  </main>
+
+  <script>
+
+const diceEls = [
+  document.getElementById('die0'),
+  document.getElementById('die1'),
+  document.getElementById('die2'),
+  document.getElementById('die3'),
+];
+const rollBtn = document.getElementById('rollBtn');
+const dropCheckbox = document.getElementById('dropLowest');
+const sumEl = document.getElementById('sum');
+
+      
+      const historyEl = document.getElementById('history');
+const sortBtn = document.getElementById('sortBtn');
+let history = [];
+
+
+// rollNormal: 1..6 estándar
+function normalRoll(){
+  return Math.floor(Math.random() * 6) + 1;
+}
+
+
+// --- Lógica principal: lanzar dados ---
+rollBtn.addEventListener('click', () => {
+let results = [];
+for (let i = 0; i < 4; i++) {
+  results.push(normalRoll());
+}
+
+// Calcula el total antes de actualizar la UI
+const minVal = Math.min(...results);
+const total = results.reduce((a,b) => a + b, 0);
+const sumDrop = dropCheckbox.checked ? total - minVal : total;
+
+// Actualiza la UI
+updateUI(results);
+
+// Actualiza historial
+history.unshift(sumDrop);
+if (history.length > 6) history.pop();
+updateHistory();
+
+});
+      
+        // --- Listener de teclado ---
+document.addEventListener("keydown", function(event) {
+  
+  if (event.key === "Enter") {
+    rollBtn.click(); 
+  }
+ });
+
+// Actualiza las casillas de dados y la suma, y marca el/los mínimo(s)
+function updateUI(results){
+  // escribe cada dado en pantalla y quita clase .min por si quedó de antes
+  results.forEach((val, i) => {
+    diceEls[i].textContent = val;
+    diceEls[i].classList.remove('min');
+  });
+
+  // calcula el mínimo y marca todos los que tengan ese valor
+  const minVal = Math.min(...results);
+  results.forEach((val, i) => {
+    if(val === minVal){
+      diceEls[i].classList.add('min');
+    }
+  });
+
+  // si el checkbox está marcado, descarta un mínimo y suma los 3 mayores
+  if(dropCheckbox.checked){
+    const total = results.reduce((a,b)=>a+b, 0);
+    const sumDrop = total - minVal;
+    sumEl.textContent = `Total (drop lowest): ${sumDrop}`;
+  } else {
+    const total = results.reduce((a,b)=>a+b, 0);
+    sumEl.textContent = `Total 4d6: ${total}`;
+  }
+}
+      function updateHistory(){
+  historyEl.textContent = `Last 6 dice rolls: ${history.join(', ')}`;
+}
+      
+      sortBtn.addEventListener('click', () => {
+  history.sort((a,b) => b - a);
+  updateHistory();
+});
+
+  </script>
+    <script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js")
+      .then(reg => {
+        // console.log("Service Worker registrado:", reg);
+      })
+      .catch(err => {
+        // console.error("Error al registrar el Service Worker:", err);
+      });
+  });
+    
+    
+}</script>
+</body>
+</html>
